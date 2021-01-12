@@ -14,7 +14,7 @@ asmlinkage long sys_pidtoname(int pid, char* buf, int len) {
 		if(task->pid == pid) {
 			int pidname_len = strlen(task->comm);
 			if (pidname_len <= len)
-			}
+			{
 				strcpy(buf, task->comm);
 				result = 0;
 			}
