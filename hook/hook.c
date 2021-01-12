@@ -12,6 +12,7 @@
 #include <linux/unistd.h>
 #include <asm/cacheflush.h>
 #include <linux/fdtable.h>
+
 MODULE_LICENSE("GPL");
 /*MY sys_call_table address*/
 
@@ -75,8 +76,9 @@ asmlinkage long hook_write(unsigned int fd, const char* buf, size_t len)
         free_page((unsigned long)tmp);
         return bytes;
 }
+
 /*Make page writeable*/
-	int make_rw(unsigned long address){
+int make_rw(unsigned long address){
  	unsigned int level;
  	pte_t *pte = lookup_address(address, &level);
  	if(pte->pte &~_PAGE_RW){
@@ -84,6 +86,7 @@ asmlinkage long hook_write(unsigned int fd, const char* buf, size_t len)
  }
  return 0;
 }
+
 /* Make the page write protected */
 int make_ro(unsigned long address){
  	unsigned int level;
@@ -91,6 +94,7 @@ int make_ro(unsigned long address){
  	pte->pte = pte->pte & ~_PAGE_RW;
  return 0;
 }
+
 static int __init entry_point(void){
  	printk(KERN_INFO "Hook loaded successfully!\n");
  	
@@ -107,8 +111,9 @@ static int __init entry_point(void){
 	system_call_table_addr[__NR_write] = hook_write;
  	return 0;
 }
+
 static int __exit exit_point(void){
-	 printk(KERN_INFO "Unloaded Hook successfully\n");
+	 printk(KERN_INFO "Hook unloaded successfully\n");
  
 	 system_call_table_addr[__NR_open] = open;
 	 system_call_table_addr[__NR_write] = write;
@@ -117,6 +122,7 @@ static int __exit exit_point(void){
 	 make_ro((unsigned long)system_call_table_addr);
  return 0;
 }
+
 module_init(entry_point);
 module_exit(exit_point);
 
