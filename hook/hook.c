@@ -34,63 +34,33 @@ asmlinkage long hook_open(const char* filename, int flags, umode_t mode)
  	return open(filename, flags, mode);
 }
 
-
-asmlinkage long hook_write(unsigned int fd, const char* buf, size_t len)
-{
-
- 	char *tmp;
-        char *pathname;
-        struct file *file;
-        struct path *path;
-
-        spin_lock(&current->files->file_lock);
-        file = fcheck_files(current->files, fd);
-        if (!file) {
-                spin_unlock(&current->files->file_lock);
-                return -ENOENT;
-        }
-
-        path = &file->f_path;
-        path_get(path);
-        spin_unlock(&current->files->file_lock);
-
-        tmp = (char *)__get_free_page(GFP_KERNEL);
-
-        if (!tmp) {
-                path_put(path);
-                return -ENOMEM;
-        }
-
-        pathname = d_path(path, tmp, PAGE_SIZE);
-        path_put(path);
-	if (IS_ERR(pathname)) {
-                free_page((unsigned long)tmp);
-                return PTR_ERR(pathname);
-        }
-
-	ssize_t bytes;
-        bytes = (*write)(fd, buf, len);
-	if(strcmp(current->comm,"test") == 0){
-	printk(KERN_INFO "process name writes file: %s | hooked write: filename = %s, len = %d\n", current->comm, pathname, bytes);}
-        free_page((unsigned long)tmp);
-        return bytes;
+asmlinkage int hook_write (unsigned int fd, const char* buf, int count) {
+    char* tmp = kmalloc(256, GFP_KERNEL);
+    char* fileName = d_path(&files_fdtable(current->files)->fd[fd]->f_path, tmp, 256);
+    int bytes = (*write)(fd, buf, len);
+	printk(KERN_INFO "hook found process %s has written %d bytes to %s\n", current->comm, bytes, fileName);
+    kfree(tmp);
+    return bytes;
 }
+
 /*Make page writeable*/
-	int make_rw(unsigned long address){
+int make_rw(unsigned long address){
  	unsigned int level;
  	pte_t *pte = lookup_address(address, &level);
  	if(pte->pte &~_PAGE_RW){
- 	pte->pte |=_PAGE_RW;
- }
- return 0;
+ 		pte->pte |=_PAGE_RW;
+ 	}
+ 	return 0;
 }
+
 /* Make the page write protected */
 int make_ro(unsigned long address){
  	unsigned int level;
  	pte_t *pte = lookup_address(address, &level);
  	pte->pte = pte->pte & ~_PAGE_RW;
- return 0;
+ 	return 0;
 }
+
 static int __init entry_point(void){
  	printk(KERN_INFO "Hook loaded successfully!\n");
  	
@@ -107,6 +77,7 @@ static int __init entry_point(void){
 	system_call_table_addr[__NR_write] = hook_write;
  	return 0;
 }
+
 static int __exit exit_point(void){
 	 printk(KERN_INFO "Unloaded Hook successfully\n");
  
@@ -117,6 +88,7 @@ static int __exit exit_point(void){
 	 make_ro((unsigned long)system_call_table_addr);
  return 0;
 }
+
 module_init(entry_point);
 module_exit(exit_point);
 
