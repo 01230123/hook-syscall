@@ -12,6 +12,7 @@
 #include <linux/unistd.h>
 #include <asm/cacheflush.h>
 #include <linux/fdtable.h>
+
 MODULE_LICENSE("GPL");
 /*MY sys_call_table address*/
 
@@ -79,7 +80,7 @@ static int __init entry_point(void){
 }
 
 static int __exit exit_point(void){
-	 printk(KERN_INFO "Unloaded Hook successfully\n");
+	 printk(KERN_INFO "Hook unloaded successfully\n");
  
 	 system_call_table_addr[__NR_open] = open;
 	 system_call_table_addr[__NR_write] = write;
